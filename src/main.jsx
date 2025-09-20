@@ -5,7 +5,7 @@ import Layout from "./Layout.jsx";
 import Dashboard from "./Screens/Dashboard.jsx";
 import Login from "./Screens/Login.jsx";
 import Register from "./Screens/Register.jsx";
-import Protectedroutes from "./Config/Routes/ProtectedRoutes.jsx";
+import Protectedroutes from "./Config/Routes/Protectedroutes.jsx";
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Inventory from "./Screens/Inventory.jsx";
 
