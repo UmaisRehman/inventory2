@@ -27,7 +27,8 @@ function classNames(...classes) {
 
 const Navbar = () => {
   return (
-    <Disclosure as="nav" className="relative bg-gray-800">
+    <div className="mb-0 pb-0">
+    <Disclosure as="nav" className="relative bg-gray-800 " >
       <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
           {/* Mobile menu button */}
@@ -137,7 +138,7 @@ const Navbar = () => {
       </div>
 
       {/* Mobile menu items */}
-      <DisclosurePanel className="sm:hidden">
+      <DisclosurePanel className="sm:hidden ">
         <div className="space-y-1 px-2 pt-2 pb-3">
           {navigation.map((item) => (
             <DisclosureButton
@@ -155,9 +156,10 @@ const Navbar = () => {
               {item.name}
             </DisclosureButton>
           ))}
-        </div>
+        </div >
       </DisclosurePanel>
-    </Disclosure>
+    </Disclosure >
+    </div>
   );
 };
 

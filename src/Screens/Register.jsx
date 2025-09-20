@@ -24,7 +24,7 @@ const AddAccount = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4">
+    <div className=" flex  justify-center bg-gray-50 py-8 px-4">
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
         {/* Header with neutral color */}
         <div className="bg-gray-800 py-4">
