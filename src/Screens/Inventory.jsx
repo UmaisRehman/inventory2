@@ -1,140 +1,83 @@
-import React, { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
-import ItemTable from "../components/ItemTable";
-import AddItemModal from "../components/AddItemModal";
-import UpdateQuantityModal from "../components/UpdateQuantityModal";
-import Toast from "../components/Toast";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  addDoc,
-  updateDoc,
-  doc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { db } from "../Config/firebase/firebaseconfig";
+import { useState, useEffect } from 'react';
+import CategoryModal from '../components/CategoryModal';
+import { categoryService } from '../Config/firebase/firebaseService';
 
-const categories = [
-  { id: "electronics", name: "Electronics" },
-  { id: "furniture", name: "Furniture" },
-  { id: "office-supplies", name: "Office Supplies" },
-  { id: "tools", name: "Tools" },
-  { id: "vehicles", name: "Vehicles" },
-  { id: "materials", name: "Materials" },
-  { id: "miscellaneous", name: "Miscellaneous" },
-];
 
-export default function Inventory() {
-  const [selectedCategory, setSelectedCategory] = useState("electronics");
-  const [items, setItems] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [toast, setToast] = useState({ show: false, message: "", type: "" });
+function Inventory() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load Items
+  const loadCategories = async () => {
+    try {
+      setLoading(true);
+      const categoriesData = await categoryService.getCategories();
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadItems();
-    // eslint-disable-next-line
-  }, [selectedCategory]);
+    loadCategories();
+  }, []);
 
-  const loadItems = async () => {
-    try {
-      const q = query(
-        collection(db, "inventory"),
-        where("category", "==", selectedCategory),
-        orderBy("updatedAt", "desc")
-      );
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setItems(data);
-    } catch (err) {
-      showToast("Error loading items", "error");
-    }
-  };
-
-  const addNewItem = async (item) => {
-    try {
-      await addDoc(collection(db, "inventory"), {
-        ...item,
-        category: selectedCategory,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      setShowAddModal(false);
-      loadItems();
-      showToast("Item added successfully", "success");
-    } catch {
-      showToast("Error adding item", "error");
-    }
-  };
-
-  const updateItemQuantity = async (itemId, newQuantity) => {
-    try {
-      const itemRef = doc(db, "inventory", itemId);
-      await updateDoc(itemRef, {
-        quantity: newQuantity,
-        updatedAt: serverTimestamp(),
-      });
-      setShowUpdateModal(false);
-      loadItems();
-      showToast("Quantity updated successfully", "success");
-    } catch {
-      showToast("Error updating quantity", "error");
-    }
-  };
-
-  const showToast = (message, type) => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
+  const handleCategoryAdded = () => {
+    loadCategories(); // Refresh the categories list
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <Sidebar
-        categories={categories}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">
-            {categories.find((c) => c.id === selectedCategory)?.name}
-          </h2>
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-            + Add New Item
+    <div className="min-h-screen bg-base-200 p-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Inventory Categories</h1>
+          <button
+            className="btn btn-primary"
+            onClick={() => setIsModalOpen(true)}
+          >
+            Add Category
           </button>
         </div>
 
-        <ItemTable
-          items={items}
-          onUpdateQuantity={(item) => {
-            setSelectedItem(item);
-            setShowUpdateModal(true);
-          }}
+        {/* Categories List */}
+        <div className="bg-base-100 rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Existing Categories</h2>
+          
+          {loading ? (
+            <div className="flex justify-center">
+              <span className="loading loading-spinner loading-lg"></span>
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No categories found. Add your first category!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map((category) => (
+                <div key={category.id} className="card bg-base-100 shadow-sm border">
+                  <div className="card-body">
+                    <h3 className="card-title capitalize">{category.id}</h3>
+                    <p className="text-sm text-gray-500">
+                      Created: {category.createdAt?.toDate().toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Category Modal */}
+        <CategoryModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onCategoryAdded={handleCategoryAdded}
         />
       </div>
-
-      {/* Modals */}
-      {showAddModal && (
-        <AddItemModal onClose={() => setShowAddModal(false)} onSave={addNewItem} />
-      )}
-      {showUpdateModal && selectedItem && (
-        <UpdateQuantityModal
-          item={selectedItem}
-          onClose={() => setShowUpdateModal(false)}
-          onSave={updateItemQuantity}
-        />
-      )}
-
-      {/* Toast */}
-      {toast.show && <Toast message={toast.message} type={toast.type} />}
     </div>
   );
 }
+
+export default Inventory;
