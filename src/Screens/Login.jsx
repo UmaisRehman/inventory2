@@ -1,4 +1,8 @@
 import React, { useState } from "react";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -6,6 +10,9 @@ const Login = () => {
     password: "",
     rememberMe: false,
   });
+
+  const navigate = useNavigate();
+  const auth = getAuth();
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -15,16 +22,43 @@ const Login = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Login logic would go here
-    console.log("Login attempted:", formData);
+    try {
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      toast.success("Login successful! Redirecting...");
+      setTimeout(() => {
+        navigate("/");
+      }, 2000);
+    } catch (error) {
+      let errorMessage = "Something went wrong. Please try again.";
+
+      switch (error.code) {
+        case "auth/wrong-password":
+          errorMessage = "Incorrect password. Please try again.";
+          break;
+        case "auth/user-not-found":
+          errorMessage = "User not registered. Please sign up first.";
+          break;
+        case "auth/invalid-email":
+          errorMessage = "Invalid email format.";
+          break;
+        default:
+          errorMessage = "Unable to login. Please check your details.";
+          break;
+      }
+
+      toast.error(errorMessage);
+    }
   };
 
   return (
     <div className="flex justify-center bg-gray-50 py-8 px-4">
+      {/* Toast Container */}
+      <ToastContainer position="top-right" autoClose={3000} />
+
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-        {/* Header with neutral color */}
+        {/* Header */}
         <div className="bg-gray-800 py-4">
           <h2 className="text-xl md:text-2xl font-bold text-white text-center">
             Welcome Back
@@ -91,7 +125,10 @@ const Login = () => {
 
             {/* Login Button */}
             <div className="form-control mt-6">
-              <button className="btn bg-gray-800 hover:bg-gray-900 text-white rounded-lg py-3 w-full transition-all duration-300">
+              <button
+                type="submit"
+                className="btn bg-gray-800 hover:bg-gray-900 text-white rounded-lg py-3 w-full transition-all duration-300"
+              >
                 Login
               </button>
             </div>

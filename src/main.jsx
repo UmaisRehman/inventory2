@@ -6,8 +6,10 @@ import Dashboard from "./Screens/Dashboard.jsx";
 import Login from "./Screens/Login.jsx";
 import Register from "./Screens/Register.jsx";
 import Protectedroutes from "./Config/Routes/Protectedroutes.jsx";
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Inventory from "./Screens/Inventory.jsx";
+import Startprocurement from "./Screens/Startprocurement.jsx";
+import Profile from "./Screens/Profile.jsx";
 
 const router = createBrowserRouter([
   {
@@ -16,20 +18,28 @@ const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <Dashboard/>
+        element:<Protectedroutes component={<Dashboard />} allowedRoles={["superadmin" , "admin"]} />
       },
       {
         path: "login",
-        element: <Login />,
+        element: <Protectedroutes component={<Login />} allowedRoles={["public"]} />
       },
       {
         path: "register",
-        element: <Register/>
+        element:<Protectedroutes component={<Register />} allowedRoles={["superadmin"]} />
       },
       {
         path: "inventory",
-        element:<Protectedroutes component={<Inventory />}/>
-      }
+        element:<Protectedroutes component={<Inventory />} allowedRoles={["superadmin" , "admin"]} />
+      },
+      {
+        path: "startprocurement",
+        element:<Protectedroutes component={<Startprocurement />} allowedRoles={["superadmin" , "admin"]} />
+      },
+      {
+        path: "profile",
+        element:<Protectedroutes component={<Profile />} allowedRoles={["superadmin" , "admin"]} />
+      },
     ],
   },
 ]);
