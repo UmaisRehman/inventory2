@@ -15,7 +15,7 @@ import {
   doc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "../config/firebase/firebaseconfig";
+import { db } from "../Config/firebase/firebaseconfig";
 
 const categories = [
   { id: "electronics", name: "Electronics" },
