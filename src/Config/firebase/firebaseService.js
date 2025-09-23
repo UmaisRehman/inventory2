@@ -1,4 +1,4 @@
-import {
+  import {
   getFirestore,
   collection,
   addDoc,
@@ -20,27 +20,94 @@ const auth = getAuth(app);
 
 // Category Service
 export const categoryService = {
-  // Get all categories (collection names)
+  // Get all categories (collection names) dynamically
   getCategories: async () => {
     try {
       const categories = [];
-      // For now, we'll use a predefined list or get from a categories collection
-      // You can modify this to get from a 'categories' collection if needed
-      const categoryNames = ['hardware', 'electronics', 'glass', 'books', 'furniture'];
 
-      for (const categoryName of categoryNames) {
-        const q = query(collection(db, categoryName));
-        const querySnapshot = await getDocs(q);
+      // First, try to get categories from the categories collection
+      try {
+        const categoriesQuery = query(
+          collection(db, 'categories'),
+          orderBy('createdAt', 'desc')
+        );
+        const categoriesSnapshot = await getDocs(categoriesQuery);
 
-        if (!querySnapshot.empty) {
-          categories.push({
-            id: categoryName,
-            name: categoryName,
-            itemCount: querySnapshot.size,
-            createdAt: new Date()
+        for (const doc of categoriesSnapshot.docs) {
+          const data = doc.data();
+          const normalizedName = data.normalizedName;
+          const displayName = data.name;
+
+          // Check if the collection exists and count items
+          try {
+            const q = query(collection(db, normalizedName));
+            const querySnapshot = await getDocs(q);
+
+            let actualItems = 0;
+            querySnapshot.forEach((doc) => {
+              const itemData = doc.data();
+              if (!itemData._isCategoryMarker) {
+                actualItems++;
+              }
+            });
+
+            categories.push({
+              id: normalizedName,
+              name: displayName,
+              itemCount: actualItems,
+              createdAt: data.createdAt?.toDate?.() || new Date(data.createdAt)
+            });
+          } catch (error) {
+            // Collection doesn't exist, skip
+            console.log(`Collection ${normalizedName} not found, skipping`);
+          }
+        }
+      } catch (error) {
+        console.log('Categories collection not found, falling back to common categories');
+      }
+
+      // Fallback: Get all collections by trying common category names
+      // This is a workaround since Firestore doesn't provide a direct way to list collections
+      const commonCategories = [
+        'hardware', 'electronics', 'glass', 'books', 'furniture',
+        'clothing', 'tools', 'supplies', 'equipment', 'materials',
+        'accessories', 'components', 'parts', 'products', 'inventory'
+      ];
+
+      for (const categoryName of commonCategories) {
+        try {
+          const q = query(collection(db, categoryName));
+          const querySnapshot = await getDocs(q);
+
+          // Only add if collection has documents (excluding category markers)
+          let actualItems = 0;
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (!data._isCategoryMarker) {
+              actualItems++;
+            }
           });
+
+          if (actualItems > 0 || querySnapshot.size > 0) {
+            // Check if this category is already in the list
+            const existingCategory = categories.find(cat => cat.id === categoryName);
+            if (!existingCategory) {
+              categories.push({
+                id: categoryName,
+                name: categoryName,
+                itemCount: actualItems,
+                createdAt: new Date()
+              });
+            }
+          }
+        } catch (error) {
+          // Collection doesn't exist, skip silently
+          continue;
         }
       }
+
+      // Sort categories by name
+      categories.sort((a, b) => a.name.localeCompare(b.name));
 
       return categories;
     } catch (error) {
@@ -52,15 +119,25 @@ export const categoryService = {
   // Add new category
   addCategory: async (categoryName) => {
     try {
+      const normalizedName = categoryName.toLowerCase().trim();
+
       // Create the collection by adding a dummy document
       // In Firestore, collections are created when first document is added
-      await addDoc(collection(db, categoryName.toLowerCase()), {
+      await addDoc(collection(db, normalizedName), {
         _isCategoryMarker: true,
         createdAt: serverTimestamp(),
         createdBy: auth.currentUser?.uid
       });
 
-      return categoryName.toLowerCase();
+      // Also add to categories collection for tracking
+      await addDoc(collection(db, 'categories'), {
+        name: categoryName.trim(),
+        normalizedName: normalizedName,
+        createdAt: serverTimestamp(),
+        createdBy: auth.currentUser?.uid
+      });
+
+      return normalizedName;
     } catch (error) {
       console.error('Error adding category:', error);
       throw error;
@@ -70,6 +147,7 @@ export const categoryService = {
   // Delete category (and all its items)
   deleteCategory: async (categoryName) => {
     try {
+      // Delete all items from the category collection
       const q = query(collection(db, categoryName));
       const querySnapshot = await getDocs(q);
 
@@ -78,6 +156,24 @@ export const categoryService = {
       );
 
       await Promise.all(deletePromises);
+
+      // Also remove from categories collection
+      try {
+        const categoriesQuery = query(
+          collection(db, 'categories'),
+          where('normalizedName', '==', categoryName.toLowerCase())
+        );
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+
+        const categoryDeletePromises = categoriesSnapshot.docs.map(doc =>
+          deleteDoc(doc.ref)
+        );
+
+        await Promise.all(categoryDeletePromises);
+      } catch (error) {
+        console.log('Categories collection not found or category not tracked');
+      }
+
       return true;
     } catch (error) {
       console.error('Error deleting category:', error);
@@ -120,7 +216,6 @@ export const itemService = {
     try {
       const q = query(
         collection(db, categoryName),
-        where("_isCategoryMarker", "!=", true), // Exclude category marker documents
         orderBy("dateModified", "desc")
       );
 
@@ -129,6 +224,9 @@ export const itemService = {
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        // Filter out category marker documents
+        if (data._isCategoryMarker) return;
+
         items.push({
           id: doc.id,
           ...data,
@@ -149,7 +247,6 @@ export const itemService = {
     try {
       const q = query(
         collection(db, categoryName),
-        where("_isCategoryMarker", "!=", true),
         orderBy("dateModified", "desc")
       );
 
@@ -157,6 +254,9 @@ export const itemService = {
         const items = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
+          // Filter out category marker documents
+          if (data._isCategoryMarker) return;
+
           items.push({
             id: doc.id,
             ...data,

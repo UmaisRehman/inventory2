@@ -1,0 +1,332 @@
+import React, { useState, useEffect } from "react";
+import {
+  FiPlus,
+  FiPackage,
+  FiMenu,
+  FiX,
+  FiTrendingUp,
+  FiBarChart,
+  FiSettings,
+  FiLayers,
+  FiChevronUp,
+  FiChevronDown,
+} from "react-icons/fi";
+import CategoryModal from "./CategoryModal";
+import ScrollableCategoryList from "./ScrollableCategoryList";
+
+const ModernInventorySidebar = ({
+  categories,
+  selectedCategory,
+  onCategorySelect,
+  onCategoryAdded,
+  isSuperAdmin,
+  onAddItem,
+  stats,
+}) => {
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+  const handleCategoryAdded = () => {
+    onCategoryAdded();
+    setIsCategoryModalOpen(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileOpen(!isMobileOpen);
+  };
+
+  return (
+    <>
+      {/* Mobile Menu Button - Modern Design */}
+      <div className="lg:hidden fixed top-20 left-4 z-50">
+        <button
+          onClick={toggleMobileMenu}
+          className="btn btn-circle shadow-lg hover:shadow-xl transition-all duration-200 bg-white hover:bg-gray-50 text-blue-600 border border-blue-200 hover:border-blue-300"
+        >
+          {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+        </button>
+      </div>
+
+      {/* Desktop Sidebar - Improved Design */}
+      <div className="hidden lg:block w-72 bg-white shadow-xl border-r border-gray-100 h-full">
+        <div className="flex flex-col h-full">
+          {/* Header - Modern Design */}
+          <div className="flex-shrink-0 p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 shadow-lg relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                    <FiLayers className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Inventory</h2>
+                    <p className="text-blue-100 text-xs">Management System</p>
+                  </div>
+                </div>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    className="btn bg-white/20 text-white hover:bg-white/30 btn-sm transition-all duration-200 border-0 backdrop-blur-sm rounded-lg"
+                    title="Add Category"
+                  >
+                    <FiPlus size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Stats in Header */}
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                  <FiPackage className="text-white mx-auto mb-1" size={14} />
+                  <p className="text-white font-bold text-sm">{categories.length}</p>
+                  <p className="text-blue-100 text-xs">Categories</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                  <FiTrendingUp className="text-white mx-auto mb-1" size={14} />
+                  <p className="text-white font-bold text-sm">{stats.totalItems}</p>
+                  <p className="text-blue-100 text-xs">Items</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                  <FiBarChart className="text-white mx-auto mb-1" size={14} />
+                  <p className="text-white font-bold text-sm">${(stats.totalValue / 1000).toFixed(0)}k</p>
+                  <p className="text-blue-100 text-xs">Value</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Category Display - Modern Card Design */}
+          {selectedCategory && (
+            <div className="flex-shrink-0 p-3 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-b border-blue-100/50">
+              <div className="bg-white rounded-xl p-3 shadow-sm border border-blue-100/50">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-lg">
+                      <FiPackage className="text-white" size={16} />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 capitalize text-sm">
+                      {selectedCategory}
+                    </h3>
+                    <p className="text-blue-600 text-xs font-medium">
+                      {categories.find((cat) => cat.id === selectedCategory)
+                        ?.itemCount || 0}{" "}
+                      items
+                    </p>
+                  </div>
+                  {isSuperAdmin && (
+                    <button
+                      onClick={onAddItem}
+                      className="btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white btn-xs transition-all duration-200 shadow-sm hover:shadow-md border-0"
+                    >
+                      <FiPlus size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Categories List - Improved Scrollable Area */}
+          <div className="flex-1 min-h-0 bg-gray-50/30">
+            <div className="h-full p-2">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100/50 h-full overflow-hidden">
+                <div className="p-3 border-b border-gray-100 bg-gray-50/50">
+                  <h3 className="font-semibold text-gray-700 text-sm">All Categories</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {categories.length} total categories
+                  </p>
+                </div>
+                <div
+                  className="h-full overflow-hidden"
+                  tabIndex={0}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.focus();
+                  }}
+                >
+                  <ScrollableCategoryList
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    onCategorySelect={onCategorySelect}
+                    isSuperAdmin={isSuperAdmin}
+                    showStats={false}
+                    maxHeight="calc(100vh - 400px)"
+                    className="h-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Section - Modern Design */}
+          <div className="flex-shrink-0 p-3 bg-white border-t border-gray-100">
+            <div className="bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl p-3 border border-gray-100/50">
+              <div className="text-center mb-3">
+                <h4 className="font-semibold text-gray-700 text-sm mb-2">System Overview</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center">
+                    <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-1.5 rounded-lg text-white mb-1 inline-block">
+                      <FiPackage size={12} />
+                    </div>
+                    <p className="font-bold text-gray-900 text-xs">{categories.length}</p>
+                    <p className="text-gray-500 text-xs">Categories</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-1.5 rounded-lg text-white mb-1 inline-block">
+                      <FiTrendingUp size={12} />
+                    </div>
+                    <p className="font-bold text-gray-900 text-xs">{stats.totalItems}</p>
+                    <p className="text-gray-500 text-xs">Items</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-1.5 rounded-lg text-white mb-1 inline-block">
+                      <FiBarChart size={12} />
+                    </div>
+                    <p className="font-bold text-gray-900 text-xs">${(stats.totalValue / 1000).toFixed(0)}k</p>
+                    <p className="text-gray-500 text-xs">Value</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Add Item Button - Only show if no category selected */}
+              {!selectedCategory && isSuperAdmin && (
+                <button
+                  onClick={onAddItem}
+                  className="btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white btn-sm w-full transition-all duration-200 shadow-md hover:shadow-lg border-0"
+                >
+                  <FiPlus size={14} className="mr-2" />
+                  Add Item
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet Sidebar - NEW APPROACH */}
+      <div className="lg:hidden">
+        {/* Mobile Bottom Sheet */}
+        <div
+          className={`
+            fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out
+            ${isMobileOpen ? "translate-y-0" : "translate-y-full"}
+          `}
+          style={{ maxHeight: '85vh' }}
+        >
+          {/* Handle Bar */}
+          <div className="flex justify-center p-3 border-b border-gray-100">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+          </div>
+
+          {/* Header */}
+          <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-3xl -mt-3 relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                    <FiLayers className="text-white" size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white">Categories</h2>
+                    <p className="text-blue-100 text-xs">Choose a category</p>
+                  </div>
+                </div>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => {
+                      setIsCategoryModalOpen(true);
+                      setIsMobileOpen(false);
+                    }}
+                    className="btn bg-white/20 text-white hover:bg-white/30 btn-sm transition-all duration-200 border-0 backdrop-blur-sm rounded-lg"
+                    title="Add Category"
+                  >
+                    <FiPlus size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                  <FiPackage className="text-white mx-auto mb-1" size={14} />
+                  <p className="text-white font-bold text-sm">{categories.length}</p>
+                  <p className="text-blue-100 text-xs">Categories</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                  <FiTrendingUp className="text-white mx-auto mb-1" size={14} />
+                  <p className="text-white font-bold text-sm">{stats.totalItems}</p>
+                  <p className="text-blue-100 text-xs">Items</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
+                  <FiBarChart className="text-white mx-auto mb-1" size={14} />
+                  <p className="text-white font-bold text-sm">${(stats.totalValue / 1000).toFixed(0)}k</p>
+                  <p className="text-blue-100 text-xs">Value</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Categories List */}
+          <div className="flex-1 overflow-hidden" style={{ maxHeight: '50vh' }}>
+            <ScrollableCategoryList
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onCategorySelect={(categoryId) => {
+                onCategorySelect(categoryId);
+                setIsMobileOpen(false);
+              }}
+              isSuperAdmin={isSuperAdmin}
+              showStats={false}
+              maxHeight="50vh"
+              className="p-2"
+            />
+          </div>
+
+          {/* Bottom Actions */}
+          <div className="p-4 border-t border-gray-100 bg-gray-50">
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setIsMobileOpen(false)}
+                className="btn btn-outline flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              {selectedCategory && isSuperAdmin && (
+                <button
+                  onClick={() => {
+                    onAddItem();
+                    setIsMobileOpen(false);
+                  }}
+                  className="btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white flex-1 border-0"
+                >
+                  <FiPlus size={14} className="mr-2" />
+                  Add Item
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Backdrop */}
+        {isMobileOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity duration-300"
+            onClick={() => setIsMobileOpen(false)}
+          />
+        )}
+      </div>
+
+      {/* Category Modal */}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        onCategoryAdded={handleCategoryAdded}
+      />
+    </>
+  );
+};
+
+export default ModernInventorySidebar;
