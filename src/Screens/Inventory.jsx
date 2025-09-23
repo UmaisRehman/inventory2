@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import {
   FiPackage,
   FiRefreshCw,
@@ -12,6 +11,7 @@ import {
 import ModernInventorySidebar from "../components/ModernInventorySidebar";
 import InventoryTable from "../components/InventoryTable";
 import ItemModal from "../components/ItemModal";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import {
   categoryService,
   itemService,
@@ -27,36 +27,59 @@ const Inventory = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isEditItemModalOpen, setIsEditItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    itemId: null,
+    itemName: "",
+  });
   const [stats, setStats] = useState({
     totalItems: 0,
     totalValue: 0,
     categoriesCount: 0,
   });
 
-  // Function to calculate total value from all categories
-  const calculateTotalValue = async (categoriesData) => {
+  // Centralized function to refresh category items and update stats
+  const refreshCategoryData = async (categoryId) => {
     try {
-      if (!categoriesData || categoriesData.length === 0) {
-        return 0;
-      }
+      const itemsData = await itemService.getItems(categoryId);
+      setItems(itemsData);
 
-      let totalValue = 0;
-      for (const category of categoriesData) {
-        const itemsData = await itemService.getItems(category.id);
-        const categoryValue = itemsData.reduce(
-          (sum, item) => sum + (item.totalPrice || 0),
-          0
-        );
-        totalValue += categoryValue;
-      }
-      return totalValue;
+      // Update category item count
+      setCategories((prevCategories) =>
+        prevCategories.map((cat) =>
+          cat.id === categoryId ? { ...cat, itemCount: itemsData.length } : cat
+        )
+      );
+
+      // Calculate new category value
+      const categoryValue = itemsData.reduce(
+        (sum, item) => sum + (item.totalPrice || 0),
+        0
+      );
+
+      // Update total stats
+      const totalItems = categories.reduce(
+        (sum, cat) => sum + (cat.itemCount || 0),
+        0
+      );
+
+      const oldCategoryValue =
+        categories.find((cat) => cat.id === categoryId)?.totalValue || 0;
+      const newTotalValue = stats.totalValue - oldCategoryValue + categoryValue;
+
+      setStats((prevStats) => ({
+        ...prevStats,
+        totalItems,
+        totalValue: newTotalValue,
+      }));
     } catch (error) {
-      console.error("Error calculating total value:", error);
-      return 0;
+      console.error("Error refreshing category data:", error);
     }
   };
 
-  // Optimized data loading with caching - no dependencies to prevent re-creation
+  // Optimized data loading with caching
   const loadData = useMemo(() => {
     return async (forceRefresh = false) => {
       try {
@@ -76,17 +99,16 @@ const Inventory = () => {
           setSelectedCategory(categoriesData[0].id);
         }
 
-        // Calculate stats including total value from all categories
+        // Calculate stats
         const totalItems = categoriesData.reduce(
           (sum, cat) => sum + (cat.itemCount || 0),
           0
         );
-        const totalValue = await calculateTotalValue(categoriesData);
 
         setStats({
           totalItems,
           categoriesCount: categoriesData.length,
-          totalValue,
+          totalValue: 0, // Will be calculated as items are loaded
         });
       } catch (error) {
         console.error("Error loading data:", error);
@@ -95,7 +117,7 @@ const Inventory = () => {
         setLoading(false);
       }
     };
-  }, []); // Empty dependency array to prevent re-creation
+  }, []);
 
   // Load items when category changes (no real-time updates)
   useEffect(() => {
@@ -131,44 +153,9 @@ const Inventory = () => {
       setLoading(true);
       setIsAddItemModalOpen(false);
 
-      // Only refresh the current category items (much faster)
+      // Use centralized function to refresh category data
       if (selectedCategory) {
-        const itemsData = await itemService.getItems(selectedCategory);
-        setItems(itemsData);
-
-        // Update category item count in the categories list
-        setCategories((prevCategories) =>
-          prevCategories.map((cat) =>
-            cat.id === selectedCategory
-              ? { ...cat, itemCount: itemsData.length }
-              : cat
-          )
-        );
-
-        // Recalculate total items count
-        const totalItems = categories.reduce(
-          (sum, cat) => sum + (cat.itemCount || 0),
-          0
-        );
-
-        // Calculate new category value
-        const categoryValue = itemsData.reduce(
-          (sum, item) => sum + (item.totalPrice || 0),
-          0
-        );
-
-        // Update total value by adding the new category value
-        const oldCategoryValue =
-          categories.find((cat) => cat.id === selectedCategory)?.totalValue ||
-          0;
-        const newTotalValue =
-          stats.totalValue - oldCategoryValue + categoryValue;
-
-        setStats((prevStats) => ({
-          ...prevStats,
-          totalItems,
-          totalValue: newTotalValue,
-        }));
+        await refreshCategoryData(selectedCategory);
       }
 
       // Show success message
@@ -192,50 +179,9 @@ const Inventory = () => {
     try {
       setLoading(true);
 
-      // Only refresh the current category items (much faster)
+      // Use centralized function to refresh category data
       if (selectedCategory) {
-        const itemsData = await itemService.getItems(selectedCategory);
-        setItems(itemsData);
-
-        // Update category item count in the categories list
-        setCategories((prevCategories) =>
-          prevCategories.map((cat) =>
-            cat.id === selectedCategory
-              ? { ...cat, itemCount: itemsData.length }
-              : cat
-          )
-        );
-
-        // Recalculate total items count (only for current category change)
-        const totalItems = categories.reduce(
-          (sum, cat) => sum + (cat.itemCount || 0),
-          0
-        );
-
-        // Only recalculate total value for the affected category (much faster)
-        const updatedCategories = categories.map((cat) =>
-          cat.id === selectedCategory
-            ? { ...cat, itemCount: itemsData.length }
-            : cat
-        );
-
-        const categoryValue = itemsData.reduce(
-          (sum, item) => sum + (item.totalPrice || 0),
-          0
-        );
-
-        // Update total value by subtracting the old category value and adding new
-        const oldCategoryValue =
-          categories.find((cat) => cat.id === selectedCategory)?.totalValue ||
-          0;
-        const newTotalValue =
-          stats.totalValue - oldCategoryValue + categoryValue;
-
-        setStats((prevStats) => ({
-          ...prevStats,
-          totalItems,
-          totalValue: newTotalValue,
-        }));
+        await refreshCategoryData(selectedCategory);
       }
 
       // Show success message
@@ -250,6 +196,58 @@ const Inventory = () => {
     } catch (error) {
       console.error("Error deleting item:", error);
       toast.error("Failed to delete item");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditItem = (item) => {
+    setEditingItem(item);
+    setIsEditItemModalOpen(true);
+  };
+
+  const handleDeleteItem = (itemId, itemName) => {
+    setDeleteModal({ isOpen: true, itemId, itemName });
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await itemService.deleteItem(selectedCategory, deleteModal.itemId);
+      await handleItemDeleted();
+      setDeleteModal({ isOpen: false, itemId: null, itemName: "" });
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      toast.error("Failed to delete item");
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, itemId: null, itemName: "" });
+  };
+
+  const handleItemUpdated = async () => {
+    try {
+      setLoading(true);
+      setIsEditItemModalOpen(false);
+      setEditingItem(null);
+
+      // Use centralized function to refresh category data
+      if (selectedCategory) {
+        await refreshCategoryData(selectedCategory);
+      }
+
+      // Show success message
+      toast.success("Item updated successfully", {
+        position: "top-right",
+        autoClose: 2000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+    } catch (error) {
+      console.error("Error updating item:", error);
+      toast.error("Failed to update item");
     } finally {
       setLoading(false);
     }
@@ -315,20 +313,62 @@ const Inventory = () => {
         {/* Professional Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Clean Desktop Header */}
-          <div className="hidden lg:block bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/50 backdrop-blur-sm border-b border-blue-100/50 p-4">
+          <div className="hidden lg:block bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/50 backdrop-blur-sm border-b border-blue-100/50 p-2 pt-0">
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-3">
-                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg shadow-lg">
+                  {/* <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-lg shadow-lg">
                     <FiPackage className="text-white" size={20} />
-                  </div>
+                  </div> */}
                   <div>
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    {/* <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                       Inventory Management
                     </h1>
                     <p className="text-gray-600 text-sm mt-1">
                       Professional inventory control system
-                    </p>
+                    </p> */}
+
+                    {/* Professional Stats Section - In-line format */}
+                    <div className="flex items-center space-x-6 mt-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-blue-100 p-2 rounded-lg">
+                          <FiPackage className="text-blue-600" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {categories.length}
+                          </p>
+                          <p className="text-xs text-gray-600">Categories</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-emerald-100 p-2 rounded-lg">
+                          <FiTrendingUp
+                            className="text-emerald-600"
+                            size={16}
+                          />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {stats.totalItems}
+                          </p>
+                          <p className="text-xs text-gray-600">Total Items</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-purple-100 p-2 rounded-lg">
+                          <FiBarChart className="text-purple-600" size={16} />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-gray-900">
+                            ${(stats.totalValue / 1000).toFixed(0)}k
+                          </p>
+                          <p className="text-xs text-gray-600">Total Value</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -430,9 +470,6 @@ const Inventory = () => {
                           selectedCategory.slice(1)}{" "}
                         Items
                       </h2>
-                      <p className="text-gray-600 text-xs">
-                        Manage and organize your inventory items
-                      </p>
                     </div>
                     {isSuperAdmin && (
                       <button
@@ -461,6 +498,8 @@ const Inventory = () => {
                   }
                   onItemDeleted={handleItemDeleted}
                   isSuperAdmin={isSuperAdmin}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
                 />
               </div>
             )}
@@ -490,27 +529,25 @@ const Inventory = () => {
         mode="add"
       />
 
-      {/* Professional Toast Container - Fixed positioning */}
-      <ToastContainer
-        position="top-right"
-        autoClose={2000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-        style={{
-          "--toastify-toast-width": "320px",
-          "--toastify-toast-min-height": "48px",
-          "--toastify-font-family": "inherit",
-          "--toastify-z-index": 9999,
-          top: "20px",
-          right: "20px",
-        }}
+      {/* Professional Edit Item Modal */}
+      <ItemModal
+        isOpen={isEditItemModalOpen}
+        onClose={() => setIsEditItemModalOpen(false)}
+        onItemSaved={handleItemUpdated}
+        categoryName={selectedCategory}
+        item={editingItem}
+        mode="edit"
       />
+
+      {/* Professional Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        itemName={deleteModal.itemName}
+      />
+
+
     </div>
   );
 };

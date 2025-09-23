@@ -1,5 +1,5 @@
-import React from 'react';
-import { FiPackage, FiTrendingUp, FiBarChart } from 'react-icons/fi';
+import React from "react";
+import { FiPackage, FiTrendingUp, FiBarChart } from "react-icons/fi";
 
 const ScrollableCategoryList = ({
   categories,
@@ -7,13 +7,13 @@ const ScrollableCategoryList = ({
   onCategorySelect,
   isSuperAdmin = false,
   showStats = true,
-  maxHeight = '400px',
-  className = ''
+  maxHeight = "400px",
+  className = "",
 }) => {
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "PAK",
     }).format(amount);
   };
 
@@ -22,11 +22,12 @@ const ScrollableCategoryList = ({
       {/* Categories List - Scrollable */}
       <div className="flex-1 min-h-0">
         <div
-          className="h-full overflow-y-auto scrollbar-hide"
+          className="overflow-y-auto scrollbar-hide"
           style={{
-            maxHeight,
-            scrollbarWidth: 'none', /* Firefox */
-            msOverflowStyle: 'none' /* IE and Edge */
+            height: "fit-content",
+            maxHeight: maxHeight,
+            scrollbarWidth: "none" /* Firefox */,
+            msOverflowStyle: "none" /* IE and Edge */,
           }}
         >
           <div className="p-2 space-y-1">
@@ -37,7 +38,9 @@ const ScrollableCategoryList = ({
                 </div>
                 <p className="text-sm font-medium">No categories yet</p>
                 {isSuperAdmin && (
-                  <p className="text-xs mt-2 opacity-75">Add your first category to get started</p>
+                  <p className="text-xs mt-2 opacity-75">
+                    Add your first category to get started
+                  </p>
                 )}
               </div>
             ) : (
@@ -47,9 +50,10 @@ const ScrollableCategoryList = ({
                   onClick={() => onCategorySelect(category.id)}
                   className={`
                     w-full text-left p-3 rounded-lg transition-all duration-200
-                    ${selectedCategory === category.id
-                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg transform scale-[1.02]"
-                      : "bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 text-gray-700 hover:text-gray-900 hover:shadow-md"
+                    ${
+                      selectedCategory === category.id
+                        ? "bg-gradient-to-r from-gray-300 to-gray-400 text-gray-800 shadow-lg transform scale-[1.02]"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-800 hover:shadow-md"
                     }
                   `}
                 >
@@ -59,9 +63,14 @@ const ScrollableCategoryList = ({
                         {category.name}
                       </div>
                       <div
-                        className={`text-xs mt-1 ${selectedCategory === category.id ? 'text-blue-100' : 'text-gray-500'}`}
+                        className={`text-xs mt-1 ${
+                          selectedCategory === category.id
+                            ? "text-gray-600"
+                            : "text-gray-500"
+                        }`}
                       >
-                        {category.itemCount} item{category.itemCount !== 1 ? "s" : ""}
+                        {category.itemCount} item
+                        {category.itemCount !== 1 ? "s" : ""}
                       </div>
                     </div>
                     {selectedCategory === category.id && (
@@ -97,7 +106,10 @@ const ScrollableCategoryList = ({
                   <FiTrendingUp size={14} />
                 </div>
                 <p className="font-bold text-gray-900 text-sm">
-                  {categories.reduce((sum, cat) => sum + (cat.itemCount || 0), 0)}
+                  {categories.reduce(
+                    (sum, cat) => sum + (cat.itemCount || 0),
+                    0
+                  )}
                 </p>
                 <p className="text-xs text-gray-600">Items</p>
               </div>

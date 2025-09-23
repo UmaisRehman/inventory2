@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { auth, db } from "../Config/firebase/firebaseconfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { FaCloudUploadAlt } from "react-icons/fa";
 
@@ -158,18 +157,6 @@ const Register = () => {
 
   return (
     <div className="flex justify-center bg-gray-50 py-8 px-4 min-h-screen">
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
-
       <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 my-8">
         <div className="bg-gray-800 py-4">
           <h2 className="text-xl md:text-2xl font-bold text-white text-center">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Disclosure,
   DisclosureButton,
@@ -8,16 +8,16 @@ import {
   MenuItem,
   MenuItems,
 } from "@headlessui/react";
-import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { auth, db } from "../Config/firebase/firebaseconfig";
 import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 
 const navigation = [
-  { name: "Dashboard", href: "/", current: false },
-  { name: "Inventory", href: "/inventory", current: false },
-  { name: "Start Procurement", href: "/startprocurement", current: false },
+  { name: "Dashboard", href: "/" },
+  { name: "Inventory", href: "/inventory" },
+  { name: "Start Procurement", href: "/startprocurement" },
 ];
 
 function classNames(...classes) {
@@ -30,19 +30,22 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Memoize current navigation to avoid recalculation on every render
+  const currentNavigation = useMemo(() =>
+    navigation.map((item) => ({
+      ...item,
+      current: location.pathname === item.href,
+    })), [location.pathname]
+  );
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
-            const data = userDoc.data();
-            setUserData({
-              ...data,
-              uid: currentUser.uid,
-            });
+            setUserData({ ...userDoc.data(), uid: currentUser.uid });
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -52,8 +55,7 @@ const Navbar = () => {
         setUserData(null);
       }
     });
-
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
   const handleSignOut = async () => {
@@ -64,11 +66,6 @@ const Navbar = () => {
       console.error("Error signing out:", error);
     }
   };
-
-  const currentNavigation = navigation.map((item) => ({
-    ...item,
-    current: location.pathname === item.href,
-  }));
 
   return (
     <div className="mb-0 pb-0">
@@ -124,13 +121,6 @@ const Navbar = () => {
             {/* Right side */}
             {user ? (
               <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-                <button
-                  type="button"
-                  className="relative rounded-full p-1 text-gray-400 hover:text-white focus:outline-2 focus:outline-offset-2 focus:outline-indigo-500"
-                >
-                  <BellIcon aria-hidden="true" className="size-6" />
-                </button>
-
                 {/* Profile dropdown */}
                 <Menu as="div" className="relative ml-3">
                   <MenuButton className="relative flex rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500">

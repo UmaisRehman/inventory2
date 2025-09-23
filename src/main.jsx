@@ -26,7 +26,7 @@ const router = createBrowserRouter([
       },
       {
         path: "register",
-        element:<Protectedroutes component={<Register />} allowedRoles={["public"]} />
+        element:<Protectedroutes component={<Register />} allowedRoles={["superadmin"]} />
       },
       {
         path: "inventory",

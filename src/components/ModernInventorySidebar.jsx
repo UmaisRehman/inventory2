@@ -25,6 +25,9 @@ const ModernInventorySidebar = ({
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [sheetPosition, setSheetPosition] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startY, setStartY] = useState(0);
 
   const handleCategoryAdded = () => {
     onCategoryAdded();
@@ -33,17 +36,53 @@ const ModernInventorySidebar = ({
 
   const toggleMobileMenu = () => {
     setIsMobileOpen(!isMobileOpen);
+    setSheetPosition(0);
+  };
+
+  const handleTouchStart = (e) => {
+    if (isMobileOpen) {
+      setIsDragging(true);
+      setStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (isDragging) {
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - startY;
+      if (deltaY > 0) {
+        // Dragging down
+        setSheetPosition(deltaY);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      if (sheetPosition > 100) {
+        // If dragged down more than 100px, close
+        setIsMobileOpen(false);
+        setSheetPosition(0);
+      } else {
+        setSheetPosition(0); // Snap back
+      }
+    }
   };
 
   return (
     <>
       {/* Mobile Menu Button - Modern Design */}
-      <div className="lg:hidden fixed top-20 left-4 z-50">
+      <div
+        className={`lg:hidden fixed top-20 left-4 z-50 transition-opacity duration-300 ${
+          isMobileOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
         <button
           onClick={toggleMobileMenu}
           className="btn btn-circle shadow-lg hover:shadow-xl transition-all duration-200 bg-white hover:bg-gray-50 text-blue-600 border border-blue-200 hover:border-blue-300"
         >
-          {isMobileOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+          <FiMenu size={20} />
         </button>
       </div>
 
@@ -51,7 +90,7 @@ const ModernInventorySidebar = ({
       <div className="hidden lg:block w-72 bg-white shadow-xl border-r border-gray-100 h-full">
         <div className="flex flex-col h-full">
           {/* Header - Modern Design */}
-          <div className="flex-shrink-0 p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 shadow-lg relative overflow-hidden">
+          <div className="flex-shrink-0 p-3 mb-0 pb-0.5 pt-4  bg-gradient-to-br from-gray-700 via-cyan-600 to-cyan-700 shadow-lg relative overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
             <div className="relative">
               <div className="flex justify-between items-center mb-3">
@@ -76,27 +115,10 @@ const ModernInventorySidebar = ({
               </div>
 
               {/* Quick Stats in Header */}
-              <div className="grid grid-cols-3 gap-2 mt-3">
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
-                  <FiPackage className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">{categories.length}</p>
-                  <p className="text-blue-100 text-xs">Categories</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
-                  <FiTrendingUp className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">{stats.totalItems}</p>
-                  <p className="text-blue-100 text-xs">Items</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
-                  <FiBarChart className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">${(stats.totalValue / 1000).toFixed(0)}k</p>
-                  <p className="text-blue-100 text-xs">Value</p>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Selected Category Display - Modern Card Design */}
+          {/* Selected Category Display - Modern Card Design
           {selectedCategory && (
             <div className="flex-shrink-0 p-3 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-b border-blue-100/50">
               <div className="bg-white rounded-xl p-3 shadow-sm border border-blue-100/50">
@@ -127,81 +149,39 @@ const ModernInventorySidebar = ({
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
-          {/* Categories List - Improved Scrollable Area */}
-          <div className="flex-1 min-h-0 bg-gray-50/30">
-            <div className="h-full p-2">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100/50 h-full overflow-hidden">
-                <div className="p-3 border-b border-gray-100 bg-gray-50/50">
-                  <h3 className="font-semibold text-gray-700 text-sm">All Categories</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {categories.length} total categories
-                  </p>
-                </div>
-                <div
-                  className="h-full overflow-hidden"
-                  tabIndex={0}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.focus();
-                  }}
-                >
-                  <ScrollableCategoryList
-                    categories={categories}
-                    selectedCategory={selectedCategory}
-                    onCategorySelect={onCategorySelect}
-                    isSuperAdmin={isSuperAdmin}
-                    showStats={false}
-                    maxHeight="calc(100vh - 400px)"
-                    className="h-full"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Categories List with System Overview - Improved Design */}
+<div className="h-screen flex flex-col"> {/* Main container */}
+  {/* Your header content */}
+  
+  {/* Main content area */}
+  <div className="flex-1 min-h-0 bg-gray-50/30">
+    <div className="h-full p-2">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100/50 h-full overflow-hidden flex flex-col">
+        <div className="flex-shrink-0 p-3 border-b border-gray-100 bg-gray-50/50">
+          <h3 className="font-semibold text-gray-700 text-sm">
+            All Categories
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            {categories.length} total categories
+          </p>
+        </div>
 
-          {/* Bottom Section - Modern Design */}
-          <div className="flex-shrink-0 p-3 bg-white border-t border-gray-100">
-            <div className="bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl p-3 border border-gray-100/50">
-              <div className="text-center mb-3">
-                <h4 className="font-semibold text-gray-700 text-sm mb-2">System Overview</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center">
-                    <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-1.5 rounded-lg text-white mb-1 inline-block">
-                      <FiPackage size={12} />
-                    </div>
-                    <p className="font-bold text-gray-900 text-xs">{categories.length}</p>
-                    <p className="text-gray-500 text-xs">Categories</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-1.5 rounded-lg text-white mb-1 inline-block">
-                      <FiTrendingUp size={12} />
-                    </div>
-                    <p className="font-bold text-gray-900 text-xs">{stats.totalItems}</p>
-                    <p className="text-gray-500 text-xs">Items</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-1.5 rounded-lg text-white mb-1 inline-block">
-                      <FiBarChart size={12} />
-                    </div>
-                    <p className="font-bold text-gray-900 text-xs">${(stats.totalValue / 1000).toFixed(0)}k</p>
-                    <p className="text-gray-500 text-xs">Value</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Add Item Button - Only show if no category selected */}
-              {!selectedCategory && isSuperAdmin && (
-                <button
-                  onClick={onAddItem}
-                  className="btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white btn-sm w-full transition-all duration-200 shadow-md hover:shadow-lg border-0"
-                >
-                  <FiPlus size={14} className="mr-2" />
-                  Add Item
-                </button>
-              )}
-            </div>
-          </div>
+        <div className="flex-1 min-h-0 overflow-auto">
+          <ScrollableCategoryList
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onCategorySelect={onCategorySelect}
+            isSuperAdmin={isSuperAdmin}
+            showStats={false}
+            className="h-full"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
       </div>
 
@@ -213,13 +193,14 @@ const ModernInventorySidebar = ({
             fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out
             ${isMobileOpen ? "translate-y-0" : "translate-y-full"}
           `}
-          style={{ maxHeight: '85vh' }}
+          style={{
+            maxHeight: "85vh",
+            transform: `translateY(${isMobileOpen ? sheetPosition : "100%"})`,
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
-          {/* Handle Bar */}
-          <div className="flex justify-center p-3 border-b border-gray-100">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
-          </div>
-
           {/* Header */}
           <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-3xl -mt-3 relative overflow-hidden">
             <div className="absolute inset-0 bg-black/10"></div>
@@ -252,17 +233,23 @@ const ModernInventorySidebar = ({
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                   <FiPackage className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">{categories.length}</p>
+                  <p className="text-white font-bold text-sm">
+                    {categories.length}
+                  </p>
                   <p className="text-blue-100 text-xs">Categories</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                   <FiTrendingUp className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">{stats.totalItems}</p>
+                  <p className="text-white font-bold text-sm">
+                    {stats.totalItems}
+                  </p>
                   <p className="text-blue-100 text-xs">Items</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                   <FiBarChart className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">${(stats.totalValue / 1000).toFixed(0)}k</p>
+                  <p className="text-white font-bold text-sm">
+                    ${(stats.totalValue / 1000).toFixed(0)}k
+                  </p>
                   <p className="text-blue-100 text-xs">Value</p>
                 </div>
               </div>
@@ -270,7 +257,7 @@ const ModernInventorySidebar = ({
           </div>
 
           {/* Categories List */}
-          <div className="flex-1 overflow-hidden" style={{ maxHeight: '50vh' }}>
+          <div className="flex-1 overflow-hidden" style={{ maxHeight: "50vh" }}>
             <ScrollableCategoryList
               categories={categories}
               selectedCategory={selectedCategory}
@@ -313,7 +300,7 @@ const ModernInventorySidebar = ({
         {/* Mobile Backdrop */}
         {isMobileOpen && (
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity duration-300"
+            className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-30 transition-opacity duration-300"
             onClick={() => setIsMobileOpen(false)}
           />
         )}
