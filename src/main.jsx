@@ -8,8 +8,10 @@ import Register from "./Screens/Register.jsx";
 import Protectedroutes from "./Config/Routes/Protectedroutes.jsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Inventory from "./Screens/Inventory.jsx";
-import Startprocurement from "./Screens/Startprocurement.jsx";
 import Profile from "./Screens/Profile.jsx";
+import ShoppingCart from "./Screens/ShoppingCart.jsx";
+import OrderList from "./components/OrderList.jsx";
+import { CartProvider } from "./contexts/CartContext.jsx";
 
 const router = createBrowserRouter([
   {
@@ -33,16 +35,22 @@ const router = createBrowserRouter([
         element:<Protectedroutes component={<Inventory />} allowedRoles={["superadmin" , "admin"]} />
       },
       {
-        path: "startprocurement",
-        element:<Protectedroutes component={<Startprocurement />} allowedRoles={["superadmin" , "admin"]} />
-      },
-      {
         path: "profile",
         element:<Protectedroutes component={<Profile />} allowedRoles={["superadmin" , "admin"]} />
+      },
+      {
+        path: "cart",
+        element:<Protectedroutes component={<ShoppingCart />} allowedRoles={["superadmin" , "admin"]} />
+      },
+      {
+        path: "orders",
+        element:<Protectedroutes component={<OrderList />} allowedRoles={["superadmin" , "admin"]} />
       },
     ],
   },
 ]);
 createRoot(document.getElementById("root")).render(
-  <RouterProvider router={router} />
+  <CartProvider>
+    <RouterProvider router={router} />
+  </CartProvider>
 );

@@ -1,28 +1,48 @@
 import React, { useState, useEffect } from 'react';
 
-const ItemModal = ({ isOpen, onClose, onItemSaved, categoryName, item = null, mode = 'add', clickedElement = null }) => {
+const ItemModal = React.memo(({ isOpen, onClose, onItemSaved, categoryName, item = null, mode = 'add', clickedElement = null }) => {
   const [formData, setFormData] = useState({
     itemName: '',
     quantity: '',
-    ratePerItem: ''
+    ratePerItem: '',
+    dateModified: ''
   });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (item && mode === 'edit') {
-      setFormData({
-        itemName: item.itemName || '',
-        quantity: item.quantity?.toString() || '',
-        ratePerItem: item.ratePerItem?.toString() || ''
-      });
-    } else {
-      setFormData({
-        itemName: '',
-        quantity: '',
-        ratePerItem: ''
-      });
+    // Always set dateModified to current local time on modal open regardless of mode or saved value
+    if (isOpen) {
+      const now = new Date();
+      const tzOffset = now.getTimezoneOffset() * 60000;
+      // Fix timezone offset by subtracting instead of adding (correct local time)
+      const localISOTime = new Date(now.getTime() - tzOffset).toISOString().slice(0, 16);
+      if (item && mode === 'edit') {
+        setFormData({
+          itemName: item.itemName || '',
+          quantity: item.quantity?.toString() || '',
+          ratePerItem: item.ratePerItem?.toString() || '',
+          dateModified: localISOTime
+        });
+      } else {
+        setFormData({
+          itemName: '',
+          quantity: '',
+          ratePerItem: '',
+          dateModified: localISOTime
+        });
+      }
     }
-  }, [item, mode]);
+  }, [item, mode, isOpen]);
+
+  // Removed this useEffect to unify dateModified setting with timezone fix
+  // useEffect(() => {
+  //   if (isOpen && mode === 'add') {
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       dateModified: new Date().toISOString().slice(0, 16)
+  //     }));
+  //   }
+  // }, [isOpen, mode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +86,8 @@ const ItemModal = ({ isOpen, onClose, onItemSaved, categoryName, item = null, mo
     setFormData({
       itemName: '',
       quantity: '',
-      ratePerItem: ''
+      ratePerItem: '',
+      dateModified: ''
     });
     onClose();
   };
@@ -133,6 +154,21 @@ const ItemModal = ({ isOpen, onClose, onItemSaved, categoryName, item = null, mo
               />
             </div>
 
+            <div className="mb-4">
+              <label htmlFor="dateModified" className="block text-sm font-medium text-gray-700 mb-2">
+                Date Modified
+              </label>
+              <input
+                type="datetime-local"
+                id="dateModified"
+                value={formData.dateModified}
+                onChange={(e) => setFormData({ ...formData, dateModified: e.target.value })}
+                className="input input-bordered w-full"
+                required
+                disabled={loading}
+              />
+            </div>
+
             {formData.quantity && formData.ratePerItem && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">
@@ -147,7 +183,7 @@ const ItemModal = ({ isOpen, onClose, onItemSaved, categoryName, item = null, mo
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn btn-ghost"
+                className="btn btn-ghost text-gray-900"
                 disabled={loading}
               >
                 Cancel
@@ -169,6 +205,6 @@ const ItemModal = ({ isOpen, onClose, onItemSaved, categoryName, item = null, mo
       </div>
     </div>
   );
-};
+});
 
 export default ItemModal;

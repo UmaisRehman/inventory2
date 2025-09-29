@@ -28,6 +28,8 @@ const ModernInventorySidebar = ({
   const [sheetPosition, setSheetPosition] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
+  const [dragVelocity, setDragVelocity] = useState(0);
+  const [lastY, setLastY] = useState(0);
 
   const handleCategoryAdded = () => {
     onCategoryAdded();
@@ -43,6 +45,8 @@ const ModernInventorySidebar = ({
     if (isMobileOpen) {
       setIsDragging(true);
       setStartY(e.touches[0].clientY);
+      setLastY(e.touches[0].clientY);
+      setDragVelocity(0);
     }
   };
 
@@ -50,9 +54,12 @@ const ModernInventorySidebar = ({
     if (isDragging) {
       const currentY = e.touches[0].clientY;
       const deltaY = currentY - startY;
+      const velocity = currentY - lastY;
+      setLastY(currentY);
+      setDragVelocity(velocity);
       if (deltaY > 0) {
         // Dragging down
-        setSheetPosition(deltaY);
+        setSheetPosition(Math.min(deltaY, 200)); // Limit max drag
       }
     }
   };
@@ -60,15 +67,29 @@ const ModernInventorySidebar = ({
   const handleTouchEnd = () => {
     if (isDragging) {
       setIsDragging(false);
-      if (sheetPosition > 100) {
-        // If dragged down more than 100px, close
+      const shouldClose = sheetPosition > 80 || (sheetPosition > 40 && dragVelocity > 5);
+      if (shouldClose) {
+        // Close with animation
         setIsMobileOpen(false);
         setSheetPosition(0);
       } else {
-        setSheetPosition(0); // Snap back
+        // Snap back
+        setSheetPosition(0);
       }
     }
   };
+
+  // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileOpen]);
 
   return (
     <>
@@ -190,12 +211,13 @@ const ModernInventorySidebar = ({
         {/* Mobile Bottom Sheet */}
         <div
           className={`
-            fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-3xl shadow-2xl transform transition-transform duration-300 ease-out
+            fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-3xl shadow-2xl transform transition-all duration-300 ease-out
             ${isMobileOpen ? "translate-y-0" : "translate-y-full"}
           `}
           style={{
             maxHeight: "85vh",
             transform: `translateY(${isMobileOpen ? sheetPosition : "100%"})`,
+            transition: isDragging ? 'none' : 'transform 0.3s ease-out',
           }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -230,7 +252,7 @@ const ModernInventorySidebar = ({
               </div>
 
               {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
                   <FiPackage className="text-white mx-auto mb-1" size={14} />
                   <p className="text-white font-bold text-sm">
@@ -244,13 +266,6 @@ const ModernInventorySidebar = ({
                     {stats.totalItems}
                   </p>
                   <p className="text-blue-100 text-xs">Items</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-center">
-                  <FiBarChart className="text-white mx-auto mb-1" size={14} />
-                  <p className="text-white font-bold text-sm">
-                    ${(stats.totalValue / 1000).toFixed(0)}k
-                  </p>
-                  <p className="text-blue-100 text-xs">Value</p>
                 </div>
               </div>
             </div>

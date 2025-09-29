@@ -21,7 +21,8 @@ import "../components/ToastStyles.css";
 
 const Inventory = () => {
   const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -41,17 +42,10 @@ const Inventory = () => {
   });
 
   // Centralized function to refresh category items and update stats
-  const refreshCategoryData = async (categoryId) => {
+  const refreshCategoryData = async (categoryName) => {
     try {
-      const itemsData = await itemService.getItems(categoryId);
+      const itemsData = await itemService.getItems(categoryName);
       setItems(itemsData);
-
-      // Update category item count
-      setCategories((prevCategories) =>
-        prevCategories.map((cat) =>
-          cat.id === categoryId ? { ...cat, itemCount: itemsData.length } : cat
-        )
-      );
 
       // Calculate new category value
       const categoryValue = itemsData.reduce(
@@ -59,21 +53,37 @@ const Inventory = () => {
         0
       );
 
-      // Update total stats
-      const totalItems = categories.reduce(
+      // Update category item count and totalValue
+      setCategories((prevCategories) =>
+        prevCategories.map((cat) =>
+          cat.name === categoryName
+            ? { ...cat, itemCount: itemsData.length, totalValue: categoryValue }
+            : cat
+        )
+      );
+
+      // Recompute global stats from updated categories
+      const updatedCategories = categories.map((cat) =>
+        cat.name === categoryName
+          ? { ...cat, itemCount: itemsData.length, totalValue: categoryValue }
+          : cat
+      );
+
+      const totalItems = updatedCategories.reduce(
         (sum, cat) => sum + (cat.itemCount || 0),
         0
       );
 
-      const oldCategoryValue =
-        categories.find((cat) => cat.id === categoryId)?.totalValue || 0;
-      const newTotalValue = stats.totalValue - oldCategoryValue + categoryValue;
+      const totalValue = updatedCategories.reduce(
+        (sum, cat) => sum + (cat.totalValue || 0),
+        0
+      );
 
-      setStats((prevStats) => ({
-        ...prevStats,
+      setStats({
         totalItems,
-        totalValue: newTotalValue,
-      }));
+        totalValue,
+        categoriesCount: updatedCategories.length,
+      });
     } catch (error) {
       console.error("Error refreshing category data:", error);
     }
@@ -95,8 +105,9 @@ const Inventory = () => {
         setCategories(categoriesData);
 
         // Auto-select first category if none selected
-        if (categoriesData.length > 0 && !selectedCategory) {
-          setSelectedCategory(categoriesData[0].id);
+        if (categoriesData.length > 0 && !selectedCategoryId) {
+          setSelectedCategoryId(categoriesData[0].id);
+          setSelectedCategoryName(categoriesData[0].name);
         }
 
         // Calculate stats
@@ -105,10 +116,15 @@ const Inventory = () => {
           0
         );
 
+        const totalValue = categoriesData.reduce(
+          (sum, cat) => sum + (cat.totalValue || 0),
+          0
+        );
+
         setStats({
           totalItems,
           categoriesCount: categoriesData.length,
-          totalValue: 0, // Will be calculated as items are loaded
+          totalValue,
         });
       } catch (error) {
         console.error("Error loading data:", error);
@@ -121,10 +137,10 @@ const Inventory = () => {
 
   // Load items when category changes (no real-time updates)
   useEffect(() => {
-    if (selectedCategory) {
+    if (selectedCategoryName) {
       const loadItemsOnce = async () => {
         try {
-          const itemsData = await itemService.getItems(selectedCategory);
+          const itemsData = await itemService.getItems(selectedCategoryName);
           setItems(itemsData);
         } catch (error) {
           console.error("Error loading items:", error);
@@ -133,7 +149,7 @@ const Inventory = () => {
 
       loadItemsOnce();
     }
-  }, [selectedCategory]);
+  }, [selectedCategoryName]);
 
   // Initial load only
   useEffect(() => {
@@ -141,7 +157,11 @@ const Inventory = () => {
   }, [loadData]);
 
   const handleCategorySelect = (categoryId) => {
-    setSelectedCategory(categoryId);
+    const category = categories.find(cat => cat.id === categoryId);
+    if (category) {
+      setSelectedCategoryId(categoryId);
+      setSelectedCategoryName(category.name);
+    }
   };
 
   const handleRefresh = () => {
@@ -154,8 +174,8 @@ const Inventory = () => {
       setIsAddItemModalOpen(false);
 
       // Use centralized function to refresh category data
-      if (selectedCategory) {
-        await refreshCategoryData(selectedCategory);
+      if (selectedCategoryName) {
+        await refreshCategoryData(selectedCategoryName);
       }
 
       // Show success message
@@ -180,8 +200,8 @@ const Inventory = () => {
       setLoading(true);
 
       // Use centralized function to refresh category data
-      if (selectedCategory) {
-        await refreshCategoryData(selectedCategory);
+      if (selectedCategoryName) {
+        await refreshCategoryData(selectedCategoryName);
       }
 
       // Show success message
@@ -212,7 +232,7 @@ const Inventory = () => {
 
   const handleDeleteConfirm = async () => {
     try {
-      await itemService.deleteItem(selectedCategory, deleteModal.itemId);
+      await itemService.deleteItem(selectedCategoryName, deleteModal.itemId);
       await handleItemDeleted();
       setDeleteModal({ isOpen: false, itemId: null, itemName: "" });
     } catch (error) {
@@ -232,8 +252,8 @@ const Inventory = () => {
       setEditingItem(null);
 
       // Use centralized function to refresh category data
-      if (selectedCategory) {
-        await refreshCategoryData(selectedCategory);
+      if (selectedCategoryName) {
+        await refreshCategoryData(selectedCategoryName);
       }
 
       // Show success message
@@ -269,7 +289,7 @@ const Inventory = () => {
         </div>
 
         {/* Mobile Stats Card - Peaceful Design */}
-        {selectedCategory && (
+        {selectedCategoryName && (
           <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
@@ -301,7 +321,7 @@ const Inventory = () => {
         <div className="hidden lg:block  flex-shrink-0">
           <ModernInventorySidebar
             categories={categories}
-            selectedCategory={selectedCategory}
+            selectedCategory={selectedCategoryId}
             onCategorySelect={handleCategorySelect}
             onCategoryAdded={() => loadData(true)}
             isSuperAdmin={isSuperAdmin}
@@ -313,7 +333,7 @@ const Inventory = () => {
         {/* Professional Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Clean Desktop Header */}
-          <div className="hidden lg:block bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/50 backdrop-blur-sm border-b border-blue-100/50 p-2 pt-0">
+          <div className="hidden lg:block bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/50 backdrop-blur-sm border-b border-blue-100/50 p-2 pt-2">
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-3">
@@ -372,15 +392,15 @@ const Inventory = () => {
                   </div>
                 </div>
 
-                {selectedCategory && (
+                {selectedCategoryName && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 px-3 py-2 rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <FiBarChart size={16} className="text-blue-600" />
                         <span className="text-blue-800 font-medium text-sm">
                           Viewing:{" "}
-                          {selectedCategory.charAt(0).toUpperCase() +
-                            selectedCategory.slice(1)}{" "}
+                          {selectedCategoryName.charAt(0).toUpperCase() +
+                            selectedCategoryName.slice(1)}{" "}
                           Category
                         </span>
                       </div>
@@ -423,6 +443,37 @@ const Inventory = () => {
 
           {/* Professional Content Area */}
           <div className="flex-1 overflow-auto p-3 lg:p-4">
+            {/* Mobile Global Stats Card */}
+            <div className="lg:hidden mb-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100/50 p-4">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="bg-blue-100 p-3 rounded-lg mb-2 inline-block">
+                      <FiPackage className="text-blue-600" size={20} />
+                    </div>
+                    <p className="text-gray-600 text-xs font-medium">Total Items</p>
+                    <p className="text-gray-900 text-lg font-bold">{stats.totalItems}</p>
+                  </div>
+                  <div>
+                    <div className="bg-green-100 p-3 rounded-lg mb-2 inline-block">
+                      <FiTrendingUp className="text-green-600" size={20} />
+                    </div>
+                    <p className="text-gray-600 text-xs font-medium">Categories</p>
+                    <p className="text-gray-900 text-lg font-bold">{categories.length}</p>
+                  </div>
+                  <div>
+                    <div className="bg-purple-100 p-3 rounded-lg mb-2 inline-block">
+                      <FiBarChart className="text-purple-600" size={20} />
+                    </div>
+                    <p className="text-gray-600 text-xs font-medium">Total Value</p>
+                    <p className="text-gray-900 text-lg font-bold">
+                      ${stats.totalValue.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {loading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
@@ -435,7 +486,7 @@ const Inventory = () => {
                   <p className="text-gray-500 text-sm mt-1">Please wait</p>
                 </div>
               </div>
-            ) : !selectedCategory ? (
+            ) : !selectedCategoryName ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center max-w-lg">
                   <div className="bg-gradient-to-br from-blue-100 to-indigo-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -466,8 +517,8 @@ const Inventory = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <h2 className="text-lg font-bold text-gray-900 mb-1">
-                        {selectedCategory.charAt(0).toUpperCase() +
-                          selectedCategory.slice(1)}{" "}
+                        {selectedCategoryName.charAt(0).toUpperCase() +
+                          selectedCategoryName.slice(1)}{" "}
                         Items
                       </h2>
                     </div>
@@ -485,7 +536,7 @@ const Inventory = () => {
 
                 <InventoryTable
                   items={items}
-                  categoryName={selectedCategory}
+                  categoryName={selectedCategoryName}
                   onItemUpdated={() =>
                     toast.success("Item updated successfully", {
                       position: "top-right",
@@ -510,7 +561,7 @@ const Inventory = () => {
         <div className="lg:hidden">
           <ModernInventorySidebar
             categories={categories}
-            selectedCategory={selectedCategory}
+            selectedCategory={selectedCategoryId}
             onCategorySelect={handleCategorySelect}
             onCategoryAdded={() => loadData(true)}
             isSuperAdmin={isSuperAdmin}
@@ -525,7 +576,7 @@ const Inventory = () => {
         isOpen={isAddItemModalOpen}
         onClose={() => setIsAddItemModalOpen(false)}
         onItemSaved={handleItemSaved}
-        categoryName={selectedCategory}
+        categoryName={selectedCategoryName}
         mode="add"
       />
 
@@ -534,7 +585,7 @@ const Inventory = () => {
         isOpen={isEditItemModalOpen}
         onClose={() => setIsEditItemModalOpen(false)}
         onItemSaved={handleItemUpdated}
-        categoryName={selectedCategory}
+        categoryName={selectedCategoryName}
         item={editingItem}
         mode="edit"
       />

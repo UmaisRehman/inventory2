@@ -1,7 +1,10 @@
 import React from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiShoppingCart } from "react-icons/fi";
+import { useCart } from "../contexts/CartContext";
+import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 
-const InventoryTable = ({
+const InventoryTable = React.memo(({
   items,
   categoryName,
   onItemUpdated,
@@ -10,14 +13,20 @@ const InventoryTable = ({
   onEdit,
   onDelete,
 }) => {
+  const { addItem, getItemQuantity, isInCart, removeItem, updateQuantity, items: cartItems } = useCart();
+
+  const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-US", {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit"
     });
   };
 
@@ -28,6 +37,33 @@ const InventoryTable = ({
     }).format(amount);
   };
 
+  const handleAddToCart = (item) => {
+    if (item.quantity <= 0) {
+      toast.error("This item is out of stock");
+      return;
+    }
+
+    addItem({
+      id: item.id,
+      itemName: item.itemName,
+      serialNumber: item.serialNumber,
+      quantity: 1, // Default quantity to add
+      ratePerItem: item.ratePerItem,
+      totalPrice: item.totalPrice,
+      categoryName
+    });
+
+    toast.success(`${item.itemName} added to procurement request!`);
+  };
+
+  const handleQuantityChange = (itemId, newQuantity) => {
+    if (newQuantity < 1) {
+      removeItem(itemId);
+      toast.info("Item removed from procurement request");
+    } else {
+      updateQuantity(itemId, newQuantity);
+    }
+  };
   if (items.length === 0) {
     return (
       <div className="text-center py-12">
@@ -114,8 +150,68 @@ const InventoryTable = ({
                 </div>
               </div>
             </div>
+
+            {/* Cart Controls */}
+            <div className="mt-4 flex justify-between items-center">
+              {isInCart(item.id) ? (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleQuantityChange(item.id, getItemQuantity(item.id) - 1)}
+                    className="btn btn-sm btn-outline btn-primary"
+                    title="Decrease quantity"
+                  >
+                    -
+                  </button>
+                  <span className="text-sm font-medium min-w-[2rem] text-center">
+                    {getItemQuantity(item.id)}
+                  </span>
+                  <button
+                    onClick={() => handleQuantityChange(item.id, getItemQuantity(item.id) + 1)}
+                    className="btn btn-sm btn-outline btn-primary"
+                    title="Increase quantity"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => handleQuantityChange(item.id, 0)}
+                    className="btn btn-sm btn-ghost text-red-500 hover:bg-red-50"
+                    title="Remove from procurement request"
+                  >
+                    <FiTrash2 size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleAddToCart(item)}
+                  disabled={item.quantity <= 0}
+                  className="btn btn-primary btn-sm flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiShoppingCart size={16} />
+                  <span>Add to Cart</span>
+                </button>
+              )}
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Procurement Summary */}
+      <div className="hidden lg:flex justify-between items-center mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex items-center space-x-2">
+          <FiShoppingCart className="text-blue-600" size={20} />
+          <span className="text-sm font-medium text-blue-800">
+            Procurement Request: {totalCartItems} item{totalCartItems !== 1 ? 's' : ''}
+          </span>
+        </div>
+        {totalCartItems > 0 && (
+          <Link
+            to="/cart"
+            className="btn btn-primary btn-sm flex items-center space-x-2"
+          >
+            <FiShoppingCart size={16} />
+            <span>View Request</span>
+          </Link>
+        )}
       </div>
 
       {/* Desktop Table View */}
@@ -130,6 +226,7 @@ const InventoryTable = ({
                 <th className="bg-gray-50">Rate per Item</th>
                 <th className="bg-gray-50">Total Price</th>
                 <th className="bg-gray-50">Last Modified</th>
+                <th className="bg-gray-50">Procurement</th>
                 {isSuperAdmin && <th className="bg-gray-50">Actions</th>}
               </tr>
             </thead>
@@ -147,6 +244,48 @@ const InventoryTable = ({
                   </td>
                   <td className="text-sm text-gray-500">
                     {formatDate(item.dateModified)}
+                  </td>
+                  <td>
+                    <div className="flex flex-col items-center space-y-1">
+                      {isInCart(item.id) ? (
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => handleQuantityChange(item.id, getItemQuantity(item.id) - 1)}
+                            className="btn btn-xs btn-outline btn-primary"
+                            title="Decrease quantity"
+                          >
+                            -
+                          </button>
+                          <span className="text-xs font-medium min-w-[1.5rem] text-center">
+                            {getItemQuantity(item.id)}
+                          </span>
+                          <button
+                            onClick={() => handleQuantityChange(item.id, getItemQuantity(item.id) + 1)}
+                            className="btn btn-xs btn-outline btn-primary"
+                            title="Increase quantity"
+                          >
+                            +
+                          </button>
+                          <button
+                            onClick={() => handleQuantityChange(item.id, 0)}
+                            className="btn btn-xs btn-ghost text-red-500 hover:bg-red-50"
+                            title="Remove from procurement request"
+                          >
+                            <FiTrash2 size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleAddToCart(item)}
+                          disabled={item.quantity <= 0}
+                          className="btn btn-primary btn-xs flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Add to Cart"
+                        >
+                          <FiShoppingCart size={14} />
+                          <span>Add</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                   {isSuperAdmin && (
                     <td>
@@ -176,6 +315,6 @@ const InventoryTable = ({
       </div>
     </>
   );
-};
+});
 
 export default InventoryTable;
