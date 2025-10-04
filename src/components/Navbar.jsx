@@ -14,6 +14,7 @@ import { signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
+import ur from "../assets/ur.png"
 
 const navigation = [
   { name: "Dashboard", href: "/" },
@@ -94,7 +95,7 @@ const Navbar = () => {
                 <Link to="/">
                   <img
                     alt="Your Company"
-                    src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
+                    src={ur}
                     className="h-8 w-auto"
                   />
                 </Link>
