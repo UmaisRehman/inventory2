@@ -36,9 +36,8 @@ const OrderList = React.memo(() => {
         setUserRole(role);
 
         // Fetch orders based on role
-        const ordersData = role === 'superadmin'
-          ? await orderService.getAllOrders()
-          : await orderService.getUserOrders();
+        // Changed to show all orders to all users regardless of role
+        const ordersData = await orderService.getAllOrders();
 
         setOrders(ordersData);
       } catch (error) {
@@ -59,9 +58,7 @@ const OrderList = React.memo(() => {
       const role = await userService.getCurrentUserRole();
       setUserRole(role);
 
-      const ordersData = role === 'superadmin'
-        ? await orderService.getAllOrders()
-        : await orderService.getUserOrders();
+      const ordersData = await orderService.getAllOrders();
 
       setOrders(ordersData);
     } catch (error) {

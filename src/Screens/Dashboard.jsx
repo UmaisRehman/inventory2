@@ -28,9 +28,8 @@ const Dashboard = () => {
         setUserRole(role);
 
         // Fetch orders based on role
-        const ordersData = role === 'superadmin'
-          ? await orderService.getAllOrders()
-          : await orderService.getUserOrders();
+        // Changed to show all orders to all users regardless of role
+        const ordersData = await orderService.getAllOrders();
 
         setOrders(ordersData);
       } catch (error) {
